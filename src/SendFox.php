@@ -330,4 +330,30 @@ class SendFox
     {
         return $this->request('DELETE', "/automation-emails/{$id}");
     }
+
+    // Forms
+    public function listForms(array $query = []): array
+    {
+        return $this->request('GET', '/forms', ['query' => $query]);
+    }
+
+    public function createForm(array $data): array
+    {
+        return $this->request('POST', '/forms', ['json' => $data]);
+    }
+
+    public function getForm(int|string $id): array
+    {
+        return $this->request('GET', "/forms/{$id}");
+    }
+
+    public function updateForm(int|string $id, array $data): array
+    {
+        return $this->request('PATCH', "/forms/{$id}", ['json' => $data]);
+    }
+
+    public function deleteForm(int|string $id): array
+    {
+        return $this->request('DELETE', "/forms/{$id}");
+    }
 }
