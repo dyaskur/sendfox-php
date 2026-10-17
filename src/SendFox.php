@@ -94,4 +94,45 @@ class SendFox
     {
         return $this->request('PATCH', '/unsubscribe', ['json' => $data]);
     }
+
+    // Contact Tags
+    public function listContactTags(): array
+    {
+        return $this->request('GET', '/contact-tags');
+    }
+
+    public function createContactTag(array $data): array
+    {
+        return $this->request('POST', '/contact-tags', ['json' => $data]);
+    }
+
+    public function getContactTag(int|string $id): array
+    {
+        return $this->request('GET', "/contact-tags/{$id}");
+    }
+
+    public function updateContactTag(int|string $id, array $data): array
+    {
+        return $this->request('PATCH', "/contact-tags/{$id}", ['json' => $data]);
+    }
+
+    public function deleteContactTag(int|string $id): array
+    {
+        return $this->request('DELETE', "/contact-tags/{$id}");
+    }
+
+    public function listContactTagsForContact(int|string $contactId): array
+    {
+        return $this->request('GET', "/contacts/{$contactId}/tags");
+    }
+
+    public function attachContactTag(int|string $contactId, int|string $tagId): array
+    {
+        return $this->request('POST', "/contacts/{$contactId}/tags/{$tagId}");
+    }
+
+    public function detachContactTag(int|string $contactId, int|string $tagId): array
+    {
+        return $this->request('DELETE', "/contacts/{$contactId}/tags/{$tagId}");
+    }
 }
