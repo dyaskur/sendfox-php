@@ -135,4 +135,30 @@ class SendFox
     {
         return $this->request('DELETE', "/contacts/{$contactId}/tags/{$tagId}");
     }
+
+    // Contact Fields
+    public function listContactFields(): array
+    {
+        return $this->request('GET', '/contact-fields');
+    }
+
+    public function createContactField(array $data): array
+    {
+        return $this->request('POST', '/contact-fields', ['json' => $data]);
+    }
+
+    public function getContactField(int|string $id): array
+    {
+        return $this->request('GET', "/contact-fields/{$id}");
+    }
+
+    public function updateContactField(int|string $id, array $data): array
+    {
+        return $this->request('PATCH', "/contact-fields/{$id}", ['json' => $data]);
+    }
+
+    public function deleteContactField(int|string $id): array
+    {
+        return $this->request('DELETE', "/contact-fields/{$id}");
+    }
 }
