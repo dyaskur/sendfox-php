@@ -3,6 +3,7 @@
 namespace Dyaskur\SendFox;
 
 use Symfony\Component\HttpClient\HttpClient;
+use Symfony\Component\HttpClient\RetryableHttpClient;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
@@ -16,11 +17,19 @@ class SendFox
 
     public function __construct(#[\SensitiveParameter] string $key, ?HttpClientInterface $client = null)
     {
-        $this->client = ($client ?? HttpClient::create())->withOptions([
+        $this->client = self::retrying($client)->withOptions([
             'base_uri' => 'https://api.sendfox.com',
             'auth_bearer' => $key,
             'headers' => ['Accept' => 'application/json'],
         ]);
+    }
+
+    /**
+     * Wraps a client so rate-limited and failed idempotent requests are retried, see RetryStrategy.
+     */
+    public static function retrying(?HttpClientInterface $client = null, int $maxRetries = 3): HttpClientInterface
+    {
+        return new RetryableHttpClient($client ?? HttpClient::create(), new RetryStrategy(), $maxRetries);
     }
 
     /**

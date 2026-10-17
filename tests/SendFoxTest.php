@@ -68,6 +68,37 @@ class SendFoxTest extends TestCase
         }
     }
 
+    public function testRetriesRateLimitWithRetryAfter(): void
+    {
+        $responses = [
+            new JsonMockResponse(['message' => 'Too Many Attempts.'], ['http_code' => 429, 'response_headers' => ['Retry-After' => '0']]),
+            new JsonMockResponse(['id' => 1], ['http_code' => 201]),
+        ];
+        $client = new MockHttpClient(function () use (&$responses) { return array_shift($responses); });
+
+        $this->assertSame(['id' => 1], (new SendFox('KEY', $client))->request('POST', '/contacts', ['json' => ['email' => 'a@b.co']]));
+        $this->assertCount(0, $responses);
+    }
+
+    public function testDoesNotRetryQuotaOrPostServerError(): void
+    {
+        foreach ([[429, []], [503, ['Retry-After' => '0']]] as [$status, $headers]) {
+            $responses = [
+                new JsonMockResponse(['message' => 'No.'], ['http_code' => $status, 'response_headers' => $headers]),
+                new JsonMockResponse(['id' => 1], ['http_code' => 201]),
+            ];
+            $client = new MockHttpClient(function () use (&$responses) { return array_shift($responses); });
+
+            try {
+                (new SendFox('KEY', $client))->request('POST', '/contacts', ['json' => []]);
+                $this->fail("Expected SendFoxException on $status");
+            } catch (SendFoxException $e) {
+                $this->assertSame($status, $e->getCode());
+                $this->assertCount(1, $responses);
+            }
+        }
+    }
+
     public function testLaravelBindsClient(): void
     {
         $app = new Container();

@@ -35,7 +35,7 @@ class SendFoxTransport extends AbstractApiTransport
         ?EventDispatcherInterface $dispatcher = null,
         ?LoggerInterface $logger = null,
     ) {
-        parent::__construct($client, $dispatcher, $logger);
+        parent::__construct(SendFox::retrying($client), $dispatcher, $logger);
     }
 
     public function __toString(): string
