@@ -7,6 +7,11 @@ use Illuminate\Support\ServiceProvider;
 
 class SendFoxServiceProvider extends ServiceProvider
 {
+    public function register(): void
+    {
+        $this->app->singleton(SendFox::class, fn ($app) => new SendFox($app['config']->get('services.sendfox.key')));
+    }
+
     public function boot(): void
     {
         $this->callAfterResolving('mail.manager', function (MailManager $manager) {

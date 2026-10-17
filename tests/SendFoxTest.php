@@ -4,6 +4,9 @@ namespace Dyaskur\SendFox\Tests;
 
 use Dyaskur\SendFox\SendFox;
 use Dyaskur\SendFox\SendFoxException;
+use Dyaskur\SendFox\SendFoxServiceProvider;
+use Illuminate\Config\Repository;
+use Illuminate\Container\Container;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\JsonMockResponse;
@@ -63,5 +66,14 @@ class SendFoxTest extends TestCase
             $this->assertSame('The email field is required.', $e->getMessage());
             $this->assertSame(['email' => ['The email field is required.']], $e->errors());
         }
+    }
+
+    public function testLaravelBindsClient(): void
+    {
+        $app = new Container();
+        $app->instance('config', new Repository(['services' => ['sendfox' => ['key' => 'KEY']]]));
+        (new SendFoxServiceProvider($app))->register();
+
+        $this->assertSame($app->make(SendFox::class), $app->make(SendFox::class));
     }
 }
