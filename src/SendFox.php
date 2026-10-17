@@ -268,4 +268,25 @@ class SendFox
     {
         return $this->request('POST', "/campaigns/{$id}/resend", ['json' => $data]);
     }
+
+    // Content Library
+    public function listCampaignTemplates(array $query = []): array
+    {
+        return $this->request('GET', '/campaign-templates', ['query' => $query]);
+    }
+
+    public function getCampaignTemplate(int|string $id): array
+    {
+        return $this->request('GET', "/campaign-templates/{$id}");
+    }
+
+    public function listCampaignSections(array $query = []): array
+    {
+        return $this->request('GET', '/campaign-sections', ['query' => $query]);
+    }
+
+    public function getCampaignSection(int|string $id): array
+    {
+        return $this->request('GET', "/campaign-sections/{$id}");
+    }
 }
