@@ -1,10 +1,10 @@
 # SendFox PHP
 
-Send email through the [SendFox Transactional API](https://sendfox.com/developer/docs/#tag/Transactional) from Laravel or any app using [Symfony Mailer](https://symfony.com/doc/current/mailer.html).
+[SendFox](https://sendfox.com) for PHP and Laravel: send email through the [SendFox Transactional API](https://sendfox.com/developer/docs/#tag/Transactional), and manage contacts, lists, campaigns and automations through the [SendFox API](https://sendfox.com/developer/docs/).
 
 - Laravel `sendfox` mail transport, auto-discovered: use `Mail::`, Mailables and Notifications as usual.
-- Plain Symfony Mailer transport for any other PHP project.
-- Supports to/cc/bcc, reply-to, HTML and text bodies, attachments, tags and custom headers.
+- Plain Symfony Mailer transport for any other PHP project, supporting to/cc/bcc, reply-to, HTML and text bodies, attachments, tags and custom headers.
+- An API client with a method for every SendFox endpoint: contacts, tags, lists, campaigns, automations, forms, domains and transactional email.
 
 ## About SendFox
 
@@ -210,9 +210,126 @@ use Symfony\Component\HttpClient\HttpClient;
 $transport = new SendFoxTransport('your-api-key', HttpClient::create(['timeout' => 10]));
 ```
 
-## Error handling
+## SendFox API: contacts, lists, campaigns and more
 
-A response other than `202 Accepted` throws `Symfony\Component\Mailer\Exception\HttpTransportException`. The exception message contains SendFox's error message and any field errors, and the raw response is available from `$e->getResponse()`:
+`Dyaskur\SendFox\SendFox` is a client for the rest of the [SendFox API](https://sendfox.com/developer/docs/). It has one method per endpoint, named after the operation in the docs, and each method returns the decoded JSON response as an array.
+
+```php
+use Dyaskur\SendFox\SendFox;
+
+$sendfox = new SendFox('your-api-key');
+```
+
+In Laravel, it is bound in the container with the key from `services.sendfox.key`, so you can inject it or resolve it:
+
+```php
+public function __construct(private SendFox $sendfox) {}
+
+// or
+$sendfox = app(SendFox::class);
+```
+
+### Create and send a campaign
+
+```php
+$list = $sendfox->createContactList(['name' => 'Newsletter']);
+
+$sendfox->createContact([
+    'email' => 'jane@example.com',
+    'first_name' => 'Jane',
+    'lists' => [$list['id']],
+]);
+
+$campaign = $sendfox->createCampaign([
+    'title' => 'October newsletter',
+    'subject' => 'What we shipped in October',
+    'html' => '<p>Here is what is new.</p>',
+    'from_name' => 'Acme',
+    'from_email' => 'hello@mail.acme.com',
+    'lists' => [$list['id']],
+    // 'scheduled_at' => '2026-11-01T09:00:00Z', // omit to keep it as a draft
+]);
+
+$sendfox->sendTestCampaign($campaign['id'], ['emails' => ['me@acme.com']]);
+$sendfox->sendCampaign($campaign['id']);
+
+$stats = $sendfox->getCampaignStats($campaign['id'], ['include_link_stats' => true]);
+```
+
+### Contacts, tags and lists
+
+```php
+$contacts = $sendfox->listContacts([
+    'filter' => ['in_list_ids' => [12, 34], 'never_opened' => true],
+    'per_page' => 100,
+]);
+
+$tag = $sendfox->createContactTag(['name' => 'customer']);
+$sendfox->attachContactTag($contactId, $tag['id']);
+
+$sendfox->addContactToList($listId, ['contact_id' => $contactId]);
+$sendfox->unsubscribeContact(['email' => 'jane@example.com']);
+```
+
+List endpoints take their query parameters (filters, `page`, `per_page`) as an array. Endpoints that take a request body take it as an array too, with the field names from the docs.
+
+### All methods
+
+| Group | Methods |
+|---|---|
+| Contacts | `listContacts`, `createContact`, `getContact`, `updateContact`, `deleteContact`, `getContactActivity`, `batchImportContacts`, `createBulkContactAction`, `getBulkContactAction`, `listUnsubscribedContacts`, `unsubscribeContact` |
+| Contact tags | `listContactTags`, `createContactTag`, `getContactTag`, `updateContactTag`, `deleteContactTag`, `listContactTagsForContact`, `attachContactTag`, `detachContactTag` |
+| Contact fields | `listContactFields`, `createContactField`, `getContactField`, `updateContactField`, `deleteContactField` |
+| Lists | `listContactLists`, `createContactList`, `getContactList`, `updateContactList`, `deleteContactList`, `listListUnsubscribes`, `unsubscribeContactFromList`, `listContactsInList`, `addContactToList`, `removeContactFromList` |
+| Campaigns | `listCampaigns`, `createCampaign`, `getBatchCampaignStats`, `getCampaign`, `updateCampaign`, `deleteCampaign`, `sendCampaign`, `sendTestCampaign`, `getCampaignStats`, `listCampaignEngagement`, `resendCampaign` |
+| Content library | `listCampaignTemplates`, `getCampaignTemplate`, `listCampaignSections`, `getCampaignSection` |
+| Automations | `listAutomations`, `createAutomation`, `getAutomation`, `updateAutomation`, `deleteAutomation`, `createAutomationEmail`, `updateAutomationEmail`, `deleteAutomationEmail` |
+| Forms | `listForms`, `createForm`, `getForm`, `updateForm`, `deleteForm` |
+| Domains | `listDomains`, `createDomain`, `getDomain`, `deleteDomain`, `validateDomain` |
+| Transactional | `sendTransactionalEmail`, `sendTransactionalEmailBatch`, `listTransactionalEmails`, `getTransactionalEmail` |
+| Account | `getCurrentUser` |
+
+For an endpoint not listed here, call it directly:
+
+```php
+$sendfox->request('GET', '/campaigns', ['query' => ['page' => 2]]);
+```
+
+### Transactional email without Laravel Mail
+
+The mail transport covers single sends. For batches, idempotent retries and delivery status, use the client:
+
+```php
+$result = $sendfox->sendTransactionalEmailBatch(['emails' => [
+    ['from' => 'Acme <receipts@mail.acme.com>', 'to' => ['jane@example.com'], 'subject' => 'Receipt #1042', 'html' => '<p>Thanks!</p>', 'tag' => 'receipt'],
+]], idempotencyKey: 'receipts-2026-10-18');
+
+$message = $sendfox->getTransactionalEmail('tm_4f0c9b2e7d1a5c3e8b6f2a9d');
+$message['status']; // "delivered"
+```
+
+### API errors
+
+A non-2xx response throws `Dyaskur\SendFox\SendFoxException`:
+
+```php
+use Dyaskur\SendFox\SendFoxException;
+
+try {
+    $sendfox->createContact(['email' => 'not-an-email']);
+} catch (SendFoxException $e) {
+    $e->getCode();    // HTTP status, e.g. 422
+    $e->getMessage(); // "The email field must be a valid email address."
+    $e->errors();     // ['email' => ['The email field must be a valid email address.']]
+    $e->body;         // the full decoded error response
+}
+```
+
+On the Free plan, endpoints outside the free set return `402 Payment Required`. The API allows 60 requests per minute per user; transactional routes have their own limit (see below).
+
+## Mail error handling
+
+In the mail transport, a response other than `202 Accepted` throws `Symfony\Component\Mailer\Exception\HttpTransportException`. The exception message contains SendFox's error message and any field errors, and the raw response is available from `$e->getResponse()`:
 
 ```php
 use Symfony\Component\Mailer\Exception\HttpTransportException;
@@ -267,9 +384,8 @@ For automated tests in Laravel, `Mail::fake()` works as usual and never calls Se
 
 ## Not supported yet
 
-- The batch endpoint (`POST /transactional/emails/batch`)
-- `Idempotency-Key` for safe retries
-- Reading message status or handling webhooks
+- Webhook handling
+- `Idempotency-Key` in the mail transport (use `sendTransactionalEmail()` on the client for that)
 
 ## Testing
 
