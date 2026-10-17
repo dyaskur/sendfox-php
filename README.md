@@ -6,12 +6,23 @@ Send email through the [SendFox Transactional API](https://sendfox.com/developer
 - Plain Symfony Mailer transport for any other PHP project.
 - Supports to/cc/bcc, reply-to, HTML and text bodies, attachments, tags and custom headers.
 
+## About SendFox
+
+[SendFox](https://sendfox.com) is an email marketing platform for creators and small businesses. Besides contacts, lists, campaigns, automations and signup forms, it offers a **Transactional** API for the emails your app sends one at a time: login codes, password resets, receipts and notifications.
+
+- **Included in every plan, including the free one.** Transactional email has no separate quota: each recipient counts as one send against the same monthly sends your campaigns use.
+- **Your own domain.** You send from a domain you verify under **Account > Domains**. A sandbox sender, `onboarding@sendfoxmail.com`, lets you test before DNS is set up.
+- **Delivery tracking.** Every message gets an ID (`tm_...`). Its status (`queued`, `sent`, `delivered`, `bounced`, `complained`, `failed`, `suppressed`) shows up in the dashboard, through the API and through webhooks.
+- **Built-in protection.** Recipients on your suppression list are refused, and tags that look like authentication mail (`login_code`, `password_reset`, `otp`) never get open or click tracking.
+
+Links: [Website](https://sendfox.com) · [API docs](https://sendfox.com/developer/docs/) · [Transactional API](https://sendfox.com/developer/docs/#tag/Transactional)
+
 ## Requirements
 
 - PHP 8.2+
 - Symfony Mailer 7 or 8
 - Laravel 11, 12 or 13 (optional)
-- A SendFox account with a [personal access token](https://sendfox.com/account/oauth) that has the `transactional:send` scope
+- A SendFox account and an API key from **Settings > API tokens** (the Transactional page creates your first one)
 
 ## Installation
 
@@ -23,7 +34,7 @@ composer require dyaskur/sendfox-php
 
 ### 1. Configure
 
-The service provider is registered automatically. Add your token to `config/services.php`:
+The service provider is registered automatically. Add your API key to `config/services.php`:
 
 ```php
 'sendfox' => [
@@ -48,7 +59,7 @@ Set it as the default in `.env`:
 
 ```dotenv
 MAIL_MAILER=sendfox
-SENDFOX_API_KEY=your-personal-access-token
+SENDFOX_API_KEY=your-api-key
 MAIL_FROM_ADDRESS=hello@mail.your-domain.com
 MAIL_FROM_NAME="${APP_NAME}"
 ```
@@ -172,7 +183,7 @@ use Dyaskur\SendFox\SendFoxTransport;
 use Symfony\Component\Mailer\Mailer;
 use Symfony\Component\Mime\Email;
 
-$mailer = new Mailer(new SendFoxTransport('your-personal-access-token'));
+$mailer = new Mailer(new SendFoxTransport('your-api-key'));
 
 $mailer->send((new Email())
     ->from('Acme <hello@mail.acme.com>')
@@ -185,7 +196,7 @@ $mailer->send((new Email())
 To get the message ID, call the transport directly:
 
 ```php
-$transport = new SendFoxTransport('your-personal-access-token');
+$transport = new SendFoxTransport('your-api-key');
 
 $sent = $transport->send($email);
 $sent->getMessageId(); // "tm_..."
@@ -196,7 +207,7 @@ The second constructor argument takes any Symfony HTTP client, for example to se
 ```php
 use Symfony\Component\HttpClient\HttpClient;
 
-$transport = new SendFoxTransport('your-token', HttpClient::create(['timeout' => 10]));
+$transport = new SendFoxTransport('your-api-key', HttpClient::create(['timeout' => 10]));
 ```
 
 ## Error handling
@@ -221,7 +232,7 @@ Common errors:
 | Status | Name | Meaning |
 |---|---|---|
 | 401 | `missing_api_key`, `invalid_api_key` | Check `SENDFOX_API_KEY` |
-| 403 | `insufficient_scope` | Token is missing the `transactional:send` scope |
+| 403 | `insufficient_scope` | The key lacks the transactional scope (older free-plan keys) |
 | 403 | `domain_not_verified` | Verify the `from` domain under **Account > Domains** |
 | 403 | `sandbox_recipient_not_allowed` | The sandbox sender only delivers to your own address and the test addresses |
 | 403 | `recipient_suppressed` | The recipient previously bounced or complained |
@@ -252,7 +263,7 @@ For automated tests in Laravel, `Mail::fake()` works as usual and never calls Se
 - HTML body up to 500 KB, text body up to 100 KB.
 - At most 10 attachments, 5 MB in total. Executable and script files are refused. Inline (`cid:`) images are sent as regular attachments.
 - At most 20 custom headers.
-- 5 requests per second and 300 per minute per token.
+- 5 requests per second and 300 per minute per API key.
 
 ## Not supported yet
 
