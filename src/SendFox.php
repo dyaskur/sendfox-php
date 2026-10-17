@@ -382,4 +382,25 @@ class SendFox
     {
         return $this->request('POST', "/domains/{$id}/validate");
     }
+
+    // Transactional
+    public function sendTransactionalEmail(array $data, ?string $idempotencyKey = null): array
+    {
+        return $this->request('POST', '/transactional/emails', ['json' => $data, 'headers' => array_filter(['Idempotency-Key' => $idempotencyKey])]);
+    }
+
+    public function listTransactionalEmails(array $query = []): array
+    {
+        return $this->request('GET', '/transactional/emails', ['query' => $query]);
+    }
+
+    public function sendTransactionalEmailBatch(array $data, ?string $idempotencyKey = null): array
+    {
+        return $this->request('POST', '/transactional/emails/batch', ['json' => $data, 'headers' => array_filter(['Idempotency-Key' => $idempotencyKey])]);
+    }
+
+    public function getTransactionalEmail(int|string $id): array
+    {
+        return $this->request('GET', "/transactional/emails/{$id}");
+    }
 }
