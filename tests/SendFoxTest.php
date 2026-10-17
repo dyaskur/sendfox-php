@@ -103,6 +103,14 @@ class SendFoxTest extends TestCase
         $this->assertCount(0, $responses);
     }
 
+    public function testRetriesCanBeDisabled(): void
+    {
+        $client = new MockHttpClient(new JsonMockResponse(['message' => 'Too Many Attempts.'], ['http_code' => 429, 'response_headers' => ['Retry-After' => '0']]));
+
+        $this->expectExceptionCode(429);
+        (new SendFox('KEY', $client, maxRetries: 0))->request('GET', '/me');
+    }
+
     public function testDoesNotRetryQuotaOrPostServerError(): void
     {
         foreach ([[429, []], [503, ['Retry-After' => '0']]] as [$status, $headers]) {

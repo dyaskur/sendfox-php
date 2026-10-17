@@ -15,9 +15,12 @@ class SendFox
 {
     private HttpClientInterface $client;
 
-    public function __construct(#[\SensitiveParameter] string $key, ?HttpClientInterface $client = null)
+    /**
+     * @param int $maxRetries retries for rate limits and failed idempotent requests, 0 to disable
+     */
+    public function __construct(#[\SensitiveParameter] string $key, ?HttpClientInterface $client = null, int $maxRetries = 3)
     {
-        $this->client = self::retrying($client)->withOptions([
+        $this->client = self::retrying($client, $maxRetries)->withOptions([
             'base_uri' => 'https://api.sendfox.com',
             'auth_bearer' => $key,
             'headers' => ['Accept' => 'application/json'],
