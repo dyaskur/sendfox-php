@@ -1,8 +1,8 @@
 {
     "name": "dyaskur/sendfox-php",
-    "description": "SendFox transactional email transport for Symfony Mailer and Laravel",
+    "description": "SendFox API client and transactional mail transport for PHP and Laravel",
     "type": "library",
-    "keywords": ["sendfox", "mail", "mailer", "laravel", "symfony", "transactional"],
+    "keywords": ["sendfox", "api", "mail", "mailer", "newsletter", "laravel", "symfony", "transactional"],
     "license": "MIT",
     "require": {
         "php": "^8.2",
