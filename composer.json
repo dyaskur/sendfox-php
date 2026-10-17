@@ -1,0 +1,39 @@
+{
+    "name": "dyaskur/sendfox-php",
+    "description": "SendFox transactional email transport for Symfony Mailer and Laravel",
+    "type": "library",
+    "keywords": ["sendfox", "mail", "mailer", "laravel", "symfony", "transactional"],
+    "license": "MIT",
+    "require": {
+        "php": "^8.2",
+        "symfony/http-client": "^7.0|^8.0",
+        "symfony/mailer": "^7.0|^8.0"
+    },
+    "require-dev": {
+        "illuminate/mail": "^11.0|^12.0|^13.0",
+        "phpunit/phpunit": "^11.0|^12.0",
+        "illuminate/config": "^11.0|^12.0|^13.0"
+    },
+    "suggest": {
+        "laravel/framework": "Registers the `sendfox` mail transport automatically"
+    },
+    "autoload": {
+        "psr-4": {
+            "Dyaskur\\SendFox\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Dyaskur\\SendFox\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Dyaskur\\SendFox\\SendFoxServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
