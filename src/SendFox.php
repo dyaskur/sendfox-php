@@ -48,6 +48,33 @@ class SendFox
         return '' === $response->getContent() ? [] : $response->toArray();
     }
 
+    /**
+     * Yields every item of a paginated GET endpoint, fetching the next page as needed.
+     *
+     *     foreach ($sendfox->paginate('/lists/12/contacts', ['per_page' => 100]) as $contact) { ... }
+     *
+     * @return \Generator<int, array>
+     */
+    public function paginate(string $uri, array $query = []): \Generator
+    {
+        for ($page = $query['page'] ?? 1; ; ++$page) {
+            $result = $this->request('GET', $uri, ['query' => ['page' => $page] + $query]);
+
+            // The endpoint ignored `page` and sent an earlier page again.
+            if (($result['current_page'] ?? $page) != $page) {
+                return;
+            }
+
+            foreach ($result['data'] ?? [] as $item) {
+                yield $item;
+            }
+
+            if (empty($result['data']) || $page * ($result['per_page'] ?? \count($result['data'])) >= ($result['total'] ?? \PHP_INT_MAX)) {
+                return;
+            }
+        }
+    }
+
     // Contacts
     public function listContacts(array $query = []): array
     {
