@@ -5,6 +5,8 @@
 - Laravel `sendfox` mail transport, auto-discovered: use `Mail::`, Mailables and Notifications as usual.
 - Plain Symfony Mailer transport for any other PHP project, supporting to/cc/bcc, reply-to, HTML and text bodies, attachments, tags and custom headers.
 - An API client with a method for every SendFox endpoint: contacts, tags, lists, campaigns, automations, forms, domains and transactional email.
+- Webhook signature checks, plus a ready-made Laravel route that fires an event per delivery update.
+- Automatic retry when SendFox rate-limits a request.
 
 ## About SendFox
 
@@ -39,6 +41,7 @@ The service provider is registered automatically. Add your API key to `config/se
 ```php
 'sendfox' => [
     'key' => env('SENDFOX_API_KEY'),
+    'webhook_secret' => env('SENDFOX_WEBHOOK_SECRET'), // optional, see Webhooks
 ],
 ```
 
@@ -135,6 +138,21 @@ public function headers(): Headers
     );
 }
 ```
+
+### Safe retries with Idempotency-Key
+
+A queued mail job that fails after SendFox accepted the email would send it again on retry. Give the message a stable `Idempotency-Key` header and SendFox returns the original message instead of sending a second one, for 24 hours:
+
+```php
+public function headers(): Headers
+{
+    return new Headers(
+        text: ['Idempotency-Key' => "receipt-{$this->order->id}"],
+    );
+}
+```
+
+The transport sends it as the HTTP header SendFox expects, not as an email header.
 
 ### Attachments
 
@@ -273,6 +291,18 @@ $sendfox->unsubscribeContact(['email' => 'jane@example.com']);
 
 List endpoints take their query parameters (filters, `page`, `per_page`) as an array. Endpoints that take a request body take it as an array too, with the field names from the docs.
 
+### Iterating every page
+
+List methods return one page at a time. `paginate()` takes an endpoint path and yields every item across all pages, fetching each page only when you reach it:
+
+```php
+foreach ($sendfox->paginate('/contacts', ['per_page' => 1000, 'filter' => ['never_opened' => true]]) as $contact) {
+    // ...
+}
+
+$campaigns = iterator_to_array($sendfox->paginate('/campaigns'), false);
+```
+
 ### All methods
 
 | Group | Methods |
@@ -326,6 +356,79 @@ try {
 ```
 
 On the Free plan, endpoints outside the free set return `402 Payment Required`. The API allows 60 requests per minute per user; transactional routes have their own limit (see below).
+
+### Automatic retries
+
+The client and the mail transport both retry, up to 3 times:
+
+- a `429` that carries a `Retry-After` header, after that delay. A `429` without one, such as a used-up monthly quota, is not retried.
+- a `5xx` or network error on `GET`, `PUT` and `DELETE`. A `POST` is never retried on a `5xx`, since SendFox may already have created the contact or sent the email.
+
+To change the number of retries, or turn them off with `0`, pass `maxRetries`: `new SendFox($key, maxRetries: 5)`. A client you pass in is wrapped the same way.
+
+## Webhooks
+
+SendFox can POST an event to your app for each `sent`, `delivered`, `delayed`, `bounced`, `complained` and `failed` transactional email. Add the URL under **Transactional > Webhooks** in SendFox and copy the signing secret (`whsec_...`).
+
+### Laravel
+
+Set the secret, and the package registers `POST /sendfox/webhook` (route name `sendfox.webhook`, no CSRF):
+
+```dotenv
+SENDFOX_WEBHOOK_SECRET=whsec_...
+```
+
+Point the SendFox webhook at `https://your-app.com/sendfox/webhook`. Every request is checked against the signature, and each event fires `Dyaskur\SendFox\WebhookReceived` once. SendFox retries a failed delivery with the same event ID, and repeats are skipped:
+
+```php
+use Dyaskur\SendFox\WebhookReceived;
+use Illuminate\Support\Facades\Event;
+
+Event::listen(function (WebhookReceived $event) {
+    if (in_array($event->type, ['bounced', 'complained'])) {
+        User::where('email', $event->payload['data']['recipient'])->update(['email_invalid' => true]);
+    }
+});
+```
+
+`$event->payload` is the full event:
+
+```json
+{
+  "id": "whd_5f0c2a9e1b7d4c3a8e6f1d2b",
+  "event": "bounced",
+  "occurred_at": "2026-10-10T14:03:22+00:00",
+  "data": {
+    "message": { "id": "tm_...", "status": "bounced", "to": ["ada@example.com"], "subject": "Your code", "tag": "login_code" },
+    "recipient": "ada@example.com",
+    "status": "550",
+    "reason": "Mailbox does not exist"
+  }
+}
+```
+
+A listener that throws makes the route return an error, so SendFox retries the event later. Repeats are tracked in your app's cache for 2 days.
+
+### Plain PHP
+
+```php
+use Dyaskur\SendFox\Webhook;
+
+try {
+    $event = Webhook::verify(
+        file_get_contents('php://input'),          // the raw body
+        $_SERVER['HTTP_X_SENDFOX_SIGNATURE'] ?? null,
+        'whsec_...',
+    );
+} catch (UnexpectedValueException|JsonException) {
+    http_response_code(400);
+    exit;
+}
+
+// Handle $event, skipping any $event['id'] you have already processed.
+```
+
+`verify()` rejects a missing or wrong signature, and a timestamp more than 5 minutes from now (pass a fourth argument in seconds to change that).
 
 ## Mail error handling
 
@@ -381,11 +484,6 @@ For automated tests in Laravel, `Mail::fake()` works as usual and never calls Se
 - At most 10 attachments, 5 MB in total. Executable and script files are refused. Inline (`cid:`) images are sent as regular attachments.
 - At most 20 custom headers.
 - 5 requests per second and 300 per minute per API key.
-
-## Not supported yet
-
-- Webhook handling
-- `Idempotency-Key` in the mail transport (use `sendTransactionalEmail()` on the client for that)
 
 ## Testing
 
