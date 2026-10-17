@@ -356,4 +356,30 @@ class SendFox
     {
         return $this->request('DELETE', "/forms/{$id}");
     }
+
+    // Domains
+    public function listDomains(): array
+    {
+        return $this->request('GET', '/domains');
+    }
+
+    public function createDomain(array $data): array
+    {
+        return $this->request('POST', '/domains', ['json' => $data]);
+    }
+
+    public function getDomain(int|string $id): array
+    {
+        return $this->request('GET', "/domains/{$id}");
+    }
+
+    public function deleteDomain(int|string $id): array
+    {
+        return $this->request('DELETE', "/domains/{$id}");
+    }
+
+    public function validateDomain(int|string $id): array
+    {
+        return $this->request('POST', "/domains/{$id}/validate");
+    }
 }
