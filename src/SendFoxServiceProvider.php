@@ -2,6 +2,7 @@
 
 namespace Dyaskur\SendFox;
 
+use Illuminate\Contracts\Foundation\CachesRoutes;
 use Illuminate\Mail\MailManager;
 use Illuminate\Support\ServiceProvider;
 
@@ -19,5 +20,10 @@ class SendFoxServiceProvider extends ServiceProvider
                 $config['key'] ?? $this->app['config']->get('services.sendfox.key'),
             ));
         });
+
+        $cached = $this->app instanceof CachesRoutes && $this->app->routesAreCached();
+        if ($this->app['config']->get('services.sendfox.webhook_secret') && !$cached) {
+            $this->app['router']->post('sendfox/webhook', WebhookController::class)->name('sendfox.webhook');
+        }
     }
 }
