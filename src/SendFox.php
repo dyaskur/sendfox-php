@@ -403,4 +403,10 @@ class SendFox
     {
         return $this->request('GET', "/transactional/emails/{$id}");
     }
+
+    // Users
+    public function getCurrentUser(): array
+    {
+        return $this->request('GET', '/me');
+    }
 }
