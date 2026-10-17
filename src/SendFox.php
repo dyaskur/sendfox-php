@@ -289,4 +289,45 @@ class SendFox
     {
         return $this->request('GET', "/campaign-sections/{$id}");
     }
+
+    // Automations
+    public function listAutomations(): array
+    {
+        return $this->request('GET', '/automations');
+    }
+
+    public function createAutomation(array $data): array
+    {
+        return $this->request('POST', '/automations', ['json' => $data]);
+    }
+
+    public function getAutomation(int|string $id): array
+    {
+        return $this->request('GET', "/automations/{$id}");
+    }
+
+    public function updateAutomation(int|string $id, array $data): array
+    {
+        return $this->request('PATCH', "/automations/{$id}", ['json' => $data]);
+    }
+
+    public function deleteAutomation(int|string $id): array
+    {
+        return $this->request('DELETE', "/automations/{$id}");
+    }
+
+    public function createAutomationEmail(int|string $id, array $data): array
+    {
+        return $this->request('POST', "/automations/{$id}/emails", ['json' => $data]);
+    }
+
+    public function updateAutomationEmail(int|string $id, array $data): array
+    {
+        return $this->request('PATCH', "/automation-emails/{$id}", ['json' => $data]);
+    }
+
+    public function deleteAutomationEmail(int|string $id): array
+    {
+        return $this->request('DELETE', "/automation-emails/{$id}");
+    }
 }
