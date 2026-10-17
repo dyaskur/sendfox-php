@@ -38,4 +38,60 @@ class SendFox
 
         return '' === $response->getContent() ? [] : $response->toArray();
     }
+
+    // Contacts
+    public function listContacts(array $query = []): array
+    {
+        return $this->request('GET', '/contacts', ['query' => $query]);
+    }
+
+    public function createContact(array $data): array
+    {
+        return $this->request('POST', '/contacts', ['json' => $data]);
+    }
+
+    public function getContact(int|string $id): array
+    {
+        return $this->request('GET', "/contacts/{$id}");
+    }
+
+    public function updateContact(int|string $id, array $data): array
+    {
+        return $this->request('PATCH', "/contacts/{$id}", ['json' => $data]);
+    }
+
+    public function deleteContact(int|string $id): array
+    {
+        return $this->request('DELETE', "/contacts/{$id}");
+    }
+
+    public function getContactActivity(int|string $id): array
+    {
+        return $this->request('GET', "/contacts/{$id}/activity");
+    }
+
+    public function batchImportContacts(array $data): array
+    {
+        return $this->request('POST', '/contacts/batch', ['json' => $data]);
+    }
+
+    public function createBulkContactAction(array $data): array
+    {
+        return $this->request('POST', '/contacts/bulk-actions', ['json' => $data]);
+    }
+
+    public function getBulkContactAction(int|string $id): array
+    {
+        return $this->request('GET', "/contacts/bulk-actions/{$id}");
+    }
+
+    public function listUnsubscribedContacts(array $query = []): array
+    {
+        return $this->request('GET', '/contacts/unsubscribed', ['query' => $query]);
+    }
+
+    public function unsubscribeContact(array $data): array
+    {
+        return $this->request('PATCH', '/unsubscribe', ['json' => $data]);
+    }
 }
