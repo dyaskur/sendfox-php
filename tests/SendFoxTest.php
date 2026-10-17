@@ -11,6 +11,20 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 
 class SendFoxTest extends TestCase
 {
+    public function testCreateCampaign(): void
+    {
+        $client = new MockHttpClient(function (string $method, string $url, array $options) {
+            $this->assertSame('POST', $method);
+            $this->assertSame('https://api.sendfox.com/campaigns', $url);
+            $this->assertContains('Authorization: Bearer KEY', $options['headers']);
+            $this->assertSame(['title' => 'Launch', 'lists' => [1]], json_decode($options['body'], true));
+
+            return new JsonMockResponse(['id' => 7], ['http_code' => 201]);
+        });
+
+        $this->assertSame(['id' => 7], (new SendFox('KEY', $client))->createCampaign(['title' => 'Launch', 'lists' => [1]]));
+    }
+
     public function testBuildsPathAndQuery(): void
     {
         $client = new MockHttpClient(function (string $method, string $url) {

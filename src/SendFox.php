@@ -212,4 +212,60 @@ class SendFox
     {
         return $this->request('DELETE', "/lists/{$listId}/contacts/{$contactId}");
     }
+
+    // Campaigns
+    public function listCampaigns(): array
+    {
+        return $this->request('GET', '/campaigns');
+    }
+
+    public function createCampaign(array $data): array
+    {
+        return $this->request('POST', '/campaigns', ['json' => $data]);
+    }
+
+    public function getBatchCampaignStats(array $query = []): array
+    {
+        return $this->request('GET', '/campaigns/stats', ['query' => $query]);
+    }
+
+    public function getCampaign(int|string $id): array
+    {
+        return $this->request('GET', "/campaigns/{$id}");
+    }
+
+    public function updateCampaign(int|string $id, array $data): array
+    {
+        return $this->request('PATCH', "/campaigns/{$id}", ['json' => $data]);
+    }
+
+    public function deleteCampaign(int|string $id): array
+    {
+        return $this->request('DELETE', "/campaigns/{$id}");
+    }
+
+    public function sendCampaign(int|string $id): array
+    {
+        return $this->request('POST', "/campaigns/{$id}/send");
+    }
+
+    public function sendTestCampaign(int|string $id, array $data): array
+    {
+        return $this->request('POST', "/campaigns/{$id}/send-test", ['json' => $data]);
+    }
+
+    public function getCampaignStats(int|string $id, array $query = []): array
+    {
+        return $this->request('GET', "/campaigns/{$id}/stats", ['query' => $query]);
+    }
+
+    public function listCampaignEngagement(int|string $id, array $query = []): array
+    {
+        return $this->request('GET', "/campaigns/{$id}/engagement", ['query' => $query]);
+    }
+
+    public function resendCampaign(int|string $id, array $data): array
+    {
+        return $this->request('POST', "/campaigns/{$id}/resend", ['json' => $data]);
+    }
 }
