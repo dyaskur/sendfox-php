@@ -161,4 +161,55 @@ class SendFox
     {
         return $this->request('DELETE', "/contact-fields/{$id}");
     }
+
+    // Lists
+    public function listContactLists(array $query = []): array
+    {
+        return $this->request('GET', '/lists', ['query' => $query]);
+    }
+
+    public function createContactList(array $data): array
+    {
+        return $this->request('POST', '/lists', ['json' => $data]);
+    }
+
+    public function getContactList(int|string $id): array
+    {
+        return $this->request('GET', "/lists/{$id}");
+    }
+
+    public function updateContactList(int|string $id, array $data): array
+    {
+        return $this->request('PATCH', "/lists/{$id}", ['json' => $data]);
+    }
+
+    public function deleteContactList(int|string $id): array
+    {
+        return $this->request('DELETE', "/lists/{$id}");
+    }
+
+    public function listListUnsubscribes(int|string $listId, array $query = []): array
+    {
+        return $this->request('GET', "/lists/{$listId}/unsubscribes", ['query' => $query]);
+    }
+
+    public function unsubscribeContactFromList(int|string $listId, array $data): array
+    {
+        return $this->request('PATCH', "/lists/{$listId}/unsubscribe", ['json' => $data]);
+    }
+
+    public function listContactsInList(int|string $listId, array $query = []): array
+    {
+        return $this->request('GET', "/lists/{$listId}/contacts", ['query' => $query]);
+    }
+
+    public function addContactToList(int|string $listId, array $data): array
+    {
+        return $this->request('POST', "/lists/{$listId}/contacts", ['json' => $data]);
+    }
+
+    public function removeContactFromList(int|string $listId, int|string $contactId): array
+    {
+        return $this->request('DELETE', "/lists/{$listId}/contacts/{$contactId}");
+    }
 }
