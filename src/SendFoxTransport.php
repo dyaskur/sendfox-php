@@ -27,6 +27,7 @@ class SendFoxTransport extends AbstractApiTransport
     private const RESERVED_HEADERS = [
         'from', 'to', 'cc', 'bcc', 'reply-to', 'sender', 'subject', 'content-type', 'content-transfer-encoding',
         'mime-version', 'date', 'message-id', 'return-path', 'dkim-signature', 'received',
+        'idempotency-key', // sent as an HTTP header instead
     ];
 
     public function __construct(
@@ -47,6 +48,7 @@ class SendFoxTransport extends AbstractApiTransport
     {
         $response = $this->client->request('POST', 'https://'.$this->getEndpoint().'/transactional/emails', [
             'auth_bearer' => $this->key,
+            'headers' => array_filter(['Idempotency-Key' => $email->getHeaders()->get('Idempotency-Key')?->getBodyAsString()]),
             'json' => $this->getPayload($email, $envelope),
         ]);
 

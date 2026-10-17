@@ -58,6 +58,21 @@ class SendFoxTransportTest extends TestCase
         $this->assertSame('tm_123', $sent->getMessageId());
     }
 
+    public function testSendsIdempotencyKeyAsHttpHeader(): void
+    {
+        $client = new MockHttpClient(function (string $method, string $url, array $options) {
+            $this->assertContains('Idempotency-Key: receipt-1042', $options['headers']);
+            $this->assertArrayNotHasKey('headers', json_decode($options['body'], true));
+
+            return new JsonMockResponse(['id' => 'tm_1', 'status' => 'queued'], ['http_code' => 202]);
+        });
+
+        $email = (new Email())->from('a@acme.com')->to('b@example.com')->subject('x')->text('x');
+        $email->getHeaders()->addTextHeader('Idempotency-Key', 'receipt-1042');
+
+        (new SendFoxTransport('KEY', $client))->send($email);
+    }
+
     public function testThrowsOnApiError(): void
     {
         $client = new MockHttpClient(new JsonMockResponse(
